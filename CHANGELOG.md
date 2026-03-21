@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.1.1] - 2026-03-21
+
+### Fixed
+- Avoided a load-time error on clients where `UnitPopup_ShowMenu` no longer exists
+- Added support for Blizzard's newer tagged unit context menus so role options still appear on current clients
+- Expanded regression coverage for both legacy and modern menu registration paths
+
 ## [0.1.0] - 2026-03-21
 
 ### Added

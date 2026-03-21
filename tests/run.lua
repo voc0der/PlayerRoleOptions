@@ -28,6 +28,7 @@ local function setup_env(opts)
     local state = {
         added_buttons = {},
         hooks = {},
+        modified_menus = {},
         units = copy_table(opts.units or {}),
         in_group = not not opts.in_group,
         in_raid = not not opts.in_raid,
@@ -43,9 +44,26 @@ local function setup_env(opts)
     _G.SET_ROLE = "Set Role"
     _G.UIDROPDOWNMENU_MENU_LEVEL = 1
     _G.UnitPopupMenus = state.unit_popup_menus
+    _G.UnitPopup_ShowMenu = nil
+
+    if not opts.disable_legacy_unit_popup then
+        _G.UnitPopup_ShowMenu = function() end
+    end
 
     _G.hooksecurefunc = function(function_name, callback)
+        if type(_G[function_name]) ~= "function" then
+            error(function_name .. " is not a function")
+        end
         state.hooks[function_name] = callback
+    end
+
+    _G.Menu = nil
+    if opts.modern_menu then
+        _G.Menu = {
+            ModifyMenu = function(tag, callback)
+                state.modified_menus[tag] = callback
+            end,
+        }
     end
 
     _G.UIDropDownMenu_CreateInfo = function()
@@ -148,6 +166,46 @@ local function find_button_by_text(buttons, text)
     end
 end
 
+local function create_root_description(state)
+    local rootDescription = {}
+
+    function rootDescription:CreateDivider()
+        state.added_buttons[#state.added_buttons + 1] = {
+            kind = "divider",
+        }
+    end
+
+    function rootDescription:CreateTitle(text)
+        state.added_buttons[#state.added_buttons + 1] = {
+            kind = "title",
+            text = text,
+        }
+    end
+
+    function rootDescription:CreateRadio(text, isSelected, setSelected, data)
+        state.added_buttons[#state.added_buttons + 1] = {
+            kind = "radio",
+            text = text,
+            checked = isSelected and isSelected(data) or false,
+            func = function()
+                if setSelected then
+                    setSelected(data)
+                end
+            end,
+        }
+    end
+
+    function rootDescription:CreateButton(text, callback)
+        state.added_buttons[#state.added_buttons + 1] = {
+            kind = "button",
+            text = text,
+            func = callback,
+        }
+    end
+
+    return rootDescription
+end
+
 local function test_adds_role_entries_for_party_member()
     local state = setup_env({
         in_group = true,
@@ -248,11 +306,67 @@ local function test_skips_when_blizzard_menu_returns()
     assert_equal(#state.added_buttons, 0, "should not duplicate native Set Role menu")
 end
 
+local function test_registers_modern_menu_for_current_clients()
+    local state = setup_env({
+        modern_menu = true,
+        disable_legacy_unit_popup = true,
+        in_group = true,
+        units = {
+            player = { is_player = true, in_party = true, name = "Leader" },
+            party1 = {
+                is_player = true,
+                in_party = true,
+                name = "Alice",
+                full_name = "Alice-Atiesh",
+                assigned_role = "HEALER",
+            },
+        },
+        leaders = {
+            player = true,
+        },
+    })
+
+    assert_true(type(state.menu_hook) ~= "function", "legacy hook should be skipped when UnitPopup_ShowMenu is unavailable")
+    assert_true(type(state.modified_menus.MENU_UNIT_PLAYER) == "function", "expected Menu.ModifyMenu registration")
+
+    state.modified_menus.MENU_UNIT_PLAYER(
+        { unit = "party1" },
+        create_root_description(state),
+        { unit = "party1", fullName = "Alice-Atiesh" }
+    )
+
+    assert_equal(#state.added_buttons, 6, "expected divider, title, and four role entries")
+    assert_equal(state.added_buttons[2].text, "Set Role", "expected modern role menu title")
+    assert_equal(state.added_buttons[3].text, "Tank", "expected tank entry")
+    assert_equal(state.added_buttons[4].text, "Healer", "expected healer entry")
+    assert_true(state.added_buttons[4].checked, "expected current role to be checked")
+
+    local tankButton = find_button_by_text(state.added_buttons, "Tank")
+    assert_true(tankButton and type(tankButton.func) == "function", "expected tank entry callback")
+    tankButton.func()
+
+    assert_equal(state.last_unit_set_role.target, "party1", "expected unit token target for modern menu")
+    assert_equal(state.last_unit_set_role.role, "TANK", "expected selected role for modern menu")
+    assert_true(state.menus_closed, "expected dropdown close guard to run when available")
+end
+
+local function test_loads_without_popup_api()
+    local ok, state = pcall(setup_env, {
+        disable_legacy_unit_popup = true,
+    })
+
+    assert_true(ok, "addon should load without popup menu APIs")
+    assert_true(type(state.menu_hook) ~= "function", "should not register legacy hook when popup API is missing")
+    assert_true(next(state.modified_menus) == nil, "should not register modern menus when menu API is missing")
+end
+
 local tests = {
     { name = "adds role entries for party member", fn = test_adds_role_entries_for_party_member },
     { name = "skips menu for self or non-leader", fn = test_skips_menu_for_self_or_non_leader },
     { name = "raid assistant can assign roles", fn = test_raid_assistant_can_assign_roles },
     { name = "skips when Blizzard menu returns", fn = test_skips_when_blizzard_menu_returns },
+    { name = "registers modern menu for current clients", fn = test_registers_modern_menu_for_current_clients },
+    { name = "loads without popup api", fn = test_loads_without_popup_api },
 }
 
 for _, testCase in ipairs(tests) do
