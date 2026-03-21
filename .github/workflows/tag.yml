@@ -21,7 +21,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PAT }}
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+
+      - name: Warn when RELEASE_PAT is missing
+        if: ${{ !secrets.RELEASE_PAT }}
+        shell: bash
+        run: |
+          echo "::warning::RELEASE_PAT is not configured. This workflow can still create a tag, but tag-triggered workflows may not run. Add RELEASE_PAT for fully automated releases."
 
       - name: Read version from TOC
         id: ver

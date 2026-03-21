@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/playerroleoptions-icon.png" alt="PlayerRoleOptions icon" width="180" />
+</p>
+
 <h1 align="center">PlayerRoleOptions</h1>
 
 <p align="center">
@@ -55,10 +59,6 @@ luac -p PlayerRoleOptions.lua
 
 Release workflow details are in [`RELEASING.md`](RELEASING.md).
 
-## License
-
-MIT. See [LICENSE](LICENSE).
-
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=voc0der/PlayerRoleOptions&type=Date)](https://star-history.com/#voc0der/PlayerRoleOptions&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=voc0der/playerroleoptions&type=Date)](https://star-history.com/#voc0der/playerroleoptions&Date)
