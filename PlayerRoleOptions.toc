@@ -3,5 +3,6 @@
 ## Notes: Restores right-click role assignment for party leaders, raid leaders, and raid assistants in TBC Anniversary Classic.
 ## Author: voc0der
 ## Version: 1.0.0
+## X-Curse-Project-ID: 1492101
 
 PlayerRoleOptions.lua
