@@ -42,6 +42,18 @@ local function IsLeaderForRoleChanges()
     return UnitIsGroupLeader("player")
 end
 
+local function IsUnitInCurrentGroup(unit)
+    if not unit or not UnitExists(unit) then
+        return false
+    end
+
+    if UnitIsUnit(unit, "player") then
+        return IsInGroup()
+    end
+
+    return UnitInParty(unit) or UnitInRaid(unit)
+end
+
 local function CanShowForUnit(unit)
     if not unit or not UnitExists(unit) then
         return false
@@ -51,11 +63,7 @@ local function CanShowForUnit(unit)
         return false
     end
 
-    if UnitIsUnit(unit, "player") then
-        return false
-    end
-
-    if not (UnitInParty(unit) or UnitInRaid(unit)) then
+    if not IsUnitInCurrentGroup(unit) then
         return false
     end
 
@@ -172,16 +180,32 @@ local function GetModernMenuUnit(owner, contextData)
     return nil
 end
 
+local function AddRoleChoicesModern(menuDescription, unit, fullName)
+    for _, role in ipairs(ROLE_ORDER) do
+        if type(menuDescription.CreateRadio) == "function" then
+            menuDescription:CreateRadio(
+                ROLE_LABELS[role],
+                function()
+                    return GetAssignedRole(unit) == role
+                end,
+                function()
+                    SetUnitRole(role, unit, fullName)
+                end
+            )
+        elseif type(menuDescription.CreateButton) == "function" then
+            menuDescription:CreateButton(ROLE_LABELS[role], function()
+                SetUnitRole(role, unit, fullName)
+            end)
+        end
+    end
+end
+
 local function AddRoleMenuModern(owner, rootDescription, contextData)
     if rootDescription == nil then
         return
     end
 
-    if type(rootDescription.CreateTitle) ~= "function" then
-        return
-    end
-
-    if type(rootDescription.CreateRadio) ~= "function" and type(rootDescription.CreateButton) ~= "function" then
+    if type(rootDescription.CreateButton) ~= "function" then
         return
     end
 
@@ -199,24 +223,12 @@ local function AddRoleMenuModern(owner, rootDescription, contextData)
         rootDescription:CreateDivider()
     end
 
-    rootDescription:CreateTitle(MENU_TITLE)
-
-    for _, role in ipairs(ROLE_ORDER) do
-        if type(rootDescription.CreateRadio) == "function" then
-            rootDescription:CreateRadio(
-                ROLE_LABELS[role],
-                function()
-                    return GetAssignedRole(unit) == role
-                end,
-                function()
-                    SetUnitRole(role, unit, name)
-                end
-            )
-        else
-            rootDescription:CreateButton(ROLE_LABELS[role], function()
-                SetUnitRole(role, unit, name)
-            end)
-        end
+    local roleMenu = rootDescription:CreateButton(MENU_TITLE)
+    if roleMenu then
+        AddRoleChoicesModern(roleMenu, unit, name)
+    elseif type(rootDescription.CreateTitle) == "function" then
+        rootDescription:CreateTitle(MENU_TITLE)
+        AddRoleChoicesModern(rootDescription, unit, name)
     end
 end
 
@@ -225,11 +237,15 @@ local function RegisterModernMenus()
         return false
     end
 
+    local registeredAny = false
     for _, tag in ipairs(MODERN_MENU_TAGS) do
-        _G.Menu.ModifyMenu(tag, AddRoleMenuModern)
+        local ok = pcall(_G.Menu.ModifyMenu, tag, AddRoleMenuModern)
+        if ok then
+            registeredAny = true
+        end
     end
 
-    return true
+    return registeredAny
 end
 
 local function RegisterLegacyMenu()
@@ -237,8 +253,7 @@ local function RegisterLegacyMenu()
         return false
     end
 
-    hooksecurefunc("UnitPopup_ShowMenu", AddRoleMenu)
-    return true
+    return pcall(hooksecurefunc, "UnitPopup_ShowMenu", AddRoleMenu)
 end
 
 RegisterModernMenus()
@@ -247,8 +262,10 @@ RegisterLegacyMenu()
 PlayerRoleOptions.addonName = addonName or "PlayerRoleOptions"
 PlayerRoleOptions._test = {
     AddRoleMenu = AddRoleMenu,
+    AddRoleChoicesModern = AddRoleChoicesModern,
     AddRoleMenuModern = AddRoleMenuModern,
     CanShowForUnit = CanShowForUnit,
+    IsUnitInCurrentGroup = IsUnitInCurrentGroup,
     GetModernMenuUnit = GetModernMenuUnit,
     IsLeaderForRoleChanges = IsLeaderForRoleChanges,
     MenuAlreadyHasRoleSupport = MenuAlreadyHasRoleSupport,

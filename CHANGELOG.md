@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.1.2] - 2026-03-21
+
+### Fixed
+- Allowed leaders and assistants to assign roles to themselves when grouped
+- Restored the compact `Set Role` submenu on clients using Blizzard's newer menu system
+- Hardened load-time menu registration to avoid intermittent blank errors during `/reload`
+
 ## [0.1.1] - 2026-03-21
 
 ### Fixed
