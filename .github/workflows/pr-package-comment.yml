@@ -172,12 +172,13 @@ jobs:
             const expiresAt = artifact.expires_at
               ? new Date(artifact.expires_at).toUTCString()
               : 'Unknown';
+            const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${run.id}/artifacts/${artifact.id}`;
 
             await upsertComment([
               marker,
               'A public PR package is ready.',
               '',
-              `- Download zip: [${artifact.name}.zip](${artifact.archive_download_url})`,
+              `- Download zip: [${artifact.name}.zip](${artifactUrl})`,
               `- Workflow run: [View logs](${run.html_url})`,
               `- Expires: \`${expiresAt}\``,
               '',
