@@ -4,18 +4,14 @@
 
 # PlayerRoleOptions
 
-`PlayerRoleOptions` is a small addon for TBC Anniversary Classic.
-
-It does two things:
-
-- puts the missing `Set Role` options back into the unit right-click menu when you have permission to assign roles
-- lets you save a default Blizzard LFG role selection and reapply it on login
+- Re-introduces `Set Role` options back into the unit right-click menu when you have permission to assign roles
+- Save a default Blizzard LFG role selection and reapply it on login
 
 Current version: `1.0.4`
 
 ## What It Does
 
-- Restores `Tank`, `Healer`, `DPS`, and `Clear Role` in the unit menu
+- Restores `Tank`, `Healer`, `DPS`, and `Clear Role` by right clicking a player's unit frame
 - Works for party leaders, raid leaders, and raid assistants
 - Adds `Game` -> `AddOns` -> `PlayerRoleOptions` with an `LFG Default Role` dropdown
 - Supports any Blizzard LFG role combination, including single-role, dual-role, and all-role selections
@@ -23,37 +19,14 @@ Current version: `1.0.4`
 
 ## Install
 
-1. Download the latest release from GitHub or CurseForge.
+1. Download the latest release from [GitHub](https://github.com/voc0der/PlayerRoleOptions/releases/latest) or [CurseForge](https://www.curseforge.com/wow/addons/playerroleoptions).
 2. Extract the `PlayerRoleOptions` folder into:
    `World of Warcraft/_anniversary_/Interface/AddOns/`
 3. Start the game and make sure the addon is enabled.
 
-## Use
+## Contributing
 
-- Right-click a player in your party or raid to assign `Tank`, `Healer`, `DPS`, or `Clear Role`.
-- Open `Game` -> `AddOns` -> `PlayerRoleOptions` to choose which LFG roles Blizzard should have prechecked after login.
-
-## Notes
-
-- Target client: TBC Anniversary Classic
-- TOC interface: `20505`
-- This addon restores missing client UI and uses Blizzard's `UnitSetRole` and LFG role APIs.
-- If Blizzard changes or removes that backend behavior, the addon cannot override it.
-
-## Development
-
-Run tests:
-
-```bash
-lua tests/run.lua
-```
-
-Syntax check:
-
-```bash
-luac -p PlayerRoleOptions.lua tests/run.lua
-```
-
+Development and contribution notes are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 Release workflow notes are in [`RELEASING.md`](RELEASING.md).
 
 ## Star History
