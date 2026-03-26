@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [1.0.4] - 2026-03-26
+
+### Changed
+- Package only runtime addon files in PR artifacts, GitHub releases, and CurseForge uploads
+- Verify the release package matches the runtime addon tree before packager upload runs
+
 ## [1.0.3] - 2026-03-26
 
 ### Added
