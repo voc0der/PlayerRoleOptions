@@ -8,6 +8,7 @@ manual-changelog:
 
 ignore:
   - CHANGELOG.md
+  - CONTRIBUTING.md
   - LICENSE
   - RELEASING.md
   - assets
