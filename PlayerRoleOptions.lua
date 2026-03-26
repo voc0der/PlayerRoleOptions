@@ -3,6 +3,18 @@ local PlayerRoleOptions = _G.PlayerRoleOptions or {}
 _G.PlayerRoleOptions = PlayerRoleOptions
 
 local MENU_TITLE = _G.SET_ROLE or "Set Role"
+local SETTINGS_CATEGORY_NAME = addonName or "PlayerRoleOptions"
+local LFG_DEFAULT_ROLE_LABEL = "LFG Default Role"
+local LFG_DEFAULT_ROLE_TOOLTIP = "Selects the LFG roles this addon applies on login."
+local LFG_DEFAULT_ROLE_SETTING = "PLAYER_ROLE_OPTIONS_LFG_DEFAULT_ROLE"
+local LFG_DEFAULT_ROLE_NONE = 0
+local LFG_DEFAULT_ROLE_DAMAGER = 1
+local LFG_DEFAULT_ROLE_TANK = 2
+local LFG_DEFAULT_ROLE_HEALER = 3
+local LFG_DEFAULT_ROLE_TANK_HEALER = 4
+local LFG_DEFAULT_ROLE_TANK_DAMAGER = 5
+local LFG_DEFAULT_ROLE_HEALER_DAMAGER = 6
+local LFG_DEFAULT_ROLE_ALL = 7
 local ROLE_LABELS = {
     TANK = _G.TANK or "Tank",
     HEALER = _G.HEALER or "Healer",
@@ -11,6 +23,76 @@ local ROLE_LABELS = {
 }
 
 local ROLE_ORDER = { "TANK", "HEALER", "DAMAGER", "NONE" }
+local LFG_ROLE_VALUE_BY_KEY = {
+    ["000"] = LFG_DEFAULT_ROLE_NONE,
+    ["001"] = LFG_DEFAULT_ROLE_DAMAGER,
+    ["100"] = LFG_DEFAULT_ROLE_TANK,
+    ["010"] = LFG_DEFAULT_ROLE_HEALER,
+    ["110"] = LFG_DEFAULT_ROLE_TANK_HEALER,
+    ["101"] = LFG_DEFAULT_ROLE_TANK_DAMAGER,
+    ["011"] = LFG_DEFAULT_ROLE_HEALER_DAMAGER,
+    ["111"] = LFG_DEFAULT_ROLE_ALL,
+}
+local LFG_ROLE_SELECTIONS = {
+    [LFG_DEFAULT_ROLE_NONE] = {
+        tank = false,
+        healer = false,
+        dps = false,
+        text = _G.NONE or "None",
+    },
+    [LFG_DEFAULT_ROLE_DAMAGER] = {
+        tank = false,
+        healer = false,
+        dps = true,
+        text = ROLE_LABELS.DAMAGER,
+    },
+    [LFG_DEFAULT_ROLE_TANK] = {
+        tank = true,
+        healer = false,
+        dps = false,
+        text = ROLE_LABELS.TANK,
+    },
+    [LFG_DEFAULT_ROLE_HEALER] = {
+        tank = false,
+        healer = true,
+        dps = false,
+        text = ROLE_LABELS.HEALER,
+    },
+    [LFG_DEFAULT_ROLE_TANK_HEALER] = {
+        tank = true,
+        healer = true,
+        dps = false,
+        text = ROLE_LABELS.TANK .. " + " .. ROLE_LABELS.HEALER,
+    },
+    [LFG_DEFAULT_ROLE_TANK_DAMAGER] = {
+        tank = true,
+        healer = false,
+        dps = true,
+        text = ROLE_LABELS.TANK .. " + " .. ROLE_LABELS.DAMAGER,
+    },
+    [LFG_DEFAULT_ROLE_HEALER_DAMAGER] = {
+        tank = false,
+        healer = true,
+        dps = true,
+        text = ROLE_LABELS.HEALER .. " + " .. ROLE_LABELS.DAMAGER,
+    },
+    [LFG_DEFAULT_ROLE_ALL] = {
+        tank = true,
+        healer = true,
+        dps = true,
+        text = ROLE_LABELS.TANK .. " + " .. ROLE_LABELS.HEALER .. " + " .. ROLE_LABELS.DAMAGER,
+    },
+}
+local LFG_ROLE_OPTIONS = {
+    { value = LFG_DEFAULT_ROLE_NONE, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_NONE].text },
+    { value = LFG_DEFAULT_ROLE_DAMAGER, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_DAMAGER].text },
+    { value = LFG_DEFAULT_ROLE_TANK, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_TANK].text },
+    { value = LFG_DEFAULT_ROLE_HEALER, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_HEALER].text },
+    { value = LFG_DEFAULT_ROLE_TANK_HEALER, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_TANK_HEALER].text },
+    { value = LFG_DEFAULT_ROLE_TANK_DAMAGER, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_TANK_DAMAGER].text },
+    { value = LFG_DEFAULT_ROLE_HEALER_DAMAGER, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_HEALER_DAMAGER].text },
+    { value = LFG_DEFAULT_ROLE_ALL, text = LFG_ROLE_SELECTIONS[LFG_DEFAULT_ROLE_ALL].text },
+}
 -- Tagged unit popup names vary across Blizzard menu implementations, so register
 -- against the common player, party, and raid variants and filter by unit token.
 local MODERN_MENU_TAGS = {
@@ -28,6 +110,88 @@ end
 
 for raidIndex = 1, 40 do
     MODERN_MENU_TAGS[#MODERN_MENU_TAGS + 1] = "MENU_UNIT_RAID" .. raidIndex
+end
+
+local function EnsureSavedVariables()
+    if type(_G.PlayerRoleOptionsDB) ~= "table" then
+        _G.PlayerRoleOptionsDB = {}
+    end
+
+    return _G.PlayerRoleOptionsDB
+end
+
+local function IsValidLFGDefaultRole(role)
+    return LFG_ROLE_SELECTIONS[role] ~= nil
+end
+
+local function GetLFGRoleSelectionKey(tank, healer, dps)
+    return (tank and "1" or "0")
+        .. (healer and "1" or "0")
+        .. (dps and "1" or "0")
+end
+
+local function GetSavedLFGDefaultRole()
+    local db = _G.PlayerRoleOptionsDB
+    if type(db) ~= "table" or not IsValidLFGDefaultRole(db.lfgDefaultRole) then
+        return nil
+    end
+
+    return db.lfgDefaultRole
+end
+
+local function SetSavedLFGDefaultRole(role)
+    if not IsValidLFGDefaultRole(role) then
+        return
+    end
+
+    EnsureSavedVariables().lfgDefaultRole = role
+end
+
+local function GetCurrentLFGDefaultRole()
+    if type(GetLFGRoles) ~= "function" then
+        return LFG_DEFAULT_ROLE_NONE
+    end
+
+    local _, tank, healer, dps = GetLFGRoles()
+    return LFG_ROLE_VALUE_BY_KEY[GetLFGRoleSelectionKey(tank, healer, dps)] or LFG_DEFAULT_ROLE_NONE
+end
+
+local function GetConfiguredLFGDefaultRole()
+    return GetSavedLFGDefaultRole() or GetCurrentLFGDefaultRole()
+end
+
+local function ApplyLFGDefaultRole(role)
+    if not IsValidLFGDefaultRole(role) then
+        return false
+    end
+
+    if type(SetLFGRoles) ~= "function" then
+        return false
+    end
+
+    local leader = false
+    if type(GetLFGRoles) == "function" then
+        leader = not not select(1, GetLFGRoles())
+    end
+
+    local selection = LFG_ROLE_SELECTIONS[role]
+    SetLFGRoles(
+        leader,
+        selection.tank,
+        selection.healer,
+        selection.dps
+    )
+
+    return true
+end
+
+local function ApplySavedLFGDefaultRole()
+    local role = GetSavedLFGDefaultRole()
+    if role == nil then
+        return false
+    end
+
+    return ApplyLFGDefaultRole(role)
 end
 
 local function IsLeaderForRoleChanges()
@@ -256,21 +420,107 @@ local function RegisterLegacyMenu()
     return pcall(hooksecurefunc, "UnitPopup_ShowMenu", AddRoleMenu)
 end
 
+local function RegisterSettingsCategory()
+    if PlayerRoleOptions.settingsCategory ~= nil then
+        return true
+    end
+
+    if type(_G.Settings) ~= "table"
+        or type(_G.Settings.RegisterVerticalLayoutCategory) ~= "function"
+        or type(_G.Settings.RegisterProxySetting) ~= "function"
+        or type(_G.Settings.CreateDropdown) ~= "function"
+        or type(_G.Settings.CreateControlTextContainer) ~= "function"
+        or type(_G.Settings.RegisterAddOnCategory) ~= "function"
+        or type(_G.Settings.VarType) ~= "table"
+    then
+        return false
+    end
+
+    local category = _G.Settings.RegisterVerticalLayoutCategory(SETTINGS_CATEGORY_NAME)
+    local function GetValue()
+        return GetConfiguredLFGDefaultRole()
+    end
+
+    local function SetValue(value)
+        if not IsValidLFGDefaultRole(value) then
+            return
+        end
+
+        SetSavedLFGDefaultRole(value)
+        ApplyLFGDefaultRole(value)
+    end
+
+    local setting = _G.Settings.RegisterProxySetting(
+        category,
+        LFG_DEFAULT_ROLE_SETTING,
+        _G.Settings.VarType.Number,
+        LFG_DEFAULT_ROLE_LABEL,
+        LFG_DEFAULT_ROLE_NONE,
+        GetValue,
+        SetValue
+    )
+
+    _G.Settings.CreateDropdown(category, setting, function()
+        local container = _G.Settings.CreateControlTextContainer()
+        for _, option in ipairs(LFG_ROLE_OPTIONS) do
+            container:Add(option.value, option.text)
+        end
+        return container:GetData()
+    end, LFG_DEFAULT_ROLE_TOOLTIP)
+
+    _G.Settings.RegisterAddOnCategory(category)
+    PlayerRoleOptions.settingsCategory = category
+    return true
+end
+
+local function OnEvent(_, event, arg1)
+    if event == "ADDON_LOADED" then
+        if arg1 == addonName then
+            EnsureSavedVariables()
+        end
+
+        RegisterSettingsCategory()
+    elseif event == "PLAYER_LOGIN" then
+        EnsureSavedVariables()
+        ApplySavedLFGDefaultRole()
+    end
+end
+
+EnsureSavedVariables()
 RegisterModernMenus()
 RegisterLegacyMenu()
+RegisterSettingsCategory()
+
+if type(CreateFrame) == "function" then
+    local eventFrame = CreateFrame("Frame")
+    eventFrame:RegisterEvent("ADDON_LOADED")
+    eventFrame:RegisterEvent("PLAYER_LOGIN")
+    eventFrame:SetScript("OnEvent", OnEvent)
+    PlayerRoleOptions.eventFrame = eventFrame
+end
 
 PlayerRoleOptions.addonName = addonName or "PlayerRoleOptions"
 PlayerRoleOptions._test = {
     AddRoleMenu = AddRoleMenu,
     AddRoleChoicesModern = AddRoleChoicesModern,
+    ApplyLFGDefaultRole = ApplyLFGDefaultRole,
+    ApplySavedLFGDefaultRole = ApplySavedLFGDefaultRole,
     AddRoleMenuModern = AddRoleMenuModern,
     CanShowForUnit = CanShowForUnit,
+    EnsureSavedVariables = EnsureSavedVariables,
+    GetConfiguredLFGDefaultRole = GetConfiguredLFGDefaultRole,
+    GetCurrentLFGDefaultRole = GetCurrentLFGDefaultRole,
     IsUnitInCurrentGroup = IsUnitInCurrentGroup,
+    GetSavedLFGDefaultRole = GetSavedLFGDefaultRole,
     GetModernMenuUnit = GetModernMenuUnit,
     IsLeaderForRoleChanges = IsLeaderForRoleChanges,
+    IsValidLFGDefaultRole = IsValidLFGDefaultRole,
     MenuAlreadyHasRoleSupport = MenuAlreadyHasRoleSupport,
+    OnEvent = OnEvent,
     RegisterLegacyMenu = RegisterLegacyMenu,
     RegisterModernMenus = RegisterModernMenus,
+    RegisterSettingsCategory = RegisterSettingsCategory,
+    SetSavedLFGDefaultRole = SetSavedLFGDefaultRole,
     SetUnitRole = SetUnitRole,
 }
 

@@ -4,5 +4,6 @@
 ## Author: voc0der
 ## Version: 1.0.1
 ## X-Curse-Project-ID: 1492101
+## SavedVariables: PlayerRoleOptionsDB
 
 PlayerRoleOptions.lua
