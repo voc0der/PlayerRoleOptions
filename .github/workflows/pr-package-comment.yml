@@ -1,11 +1,14 @@
 name: PR Package Comment
 
 on:
-  workflow_run:
-    workflows:
-      - PR Addon Package
+  pull_request_target:
     types:
-      - completed
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
 
 permissions:
   actions: read
@@ -15,7 +18,6 @@ permissions:
 
 jobs:
   comment:
-    if: ${{ github.event.workflow_run.event == 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -26,15 +28,13 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const run = context.payload.workflow_run;
-            const prNumber = run.pull_requests?.[0]?.number;
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
             const marker = '<!-- playerroleoptions-pr-package -->';
             const labelName = 'build';
-
-            if (!prNumber) {
-              core.info('No pull request is associated with this workflow run.');
-              return;
-            }
+            const workflowName = 'PR Addon Package';
+            const maxAttempts = 30;
+            const sleepMs = 10000;
 
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
@@ -76,16 +76,45 @@ jobs:
               });
             }
 
-            const { data: pr } = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: prNumber,
-            });
-
             const hasBuildLabel = pr.labels.some(label => label.name === labelName);
             if (!hasBuildLabel) {
               core.info(`PR #${prNumber} does not have the ${labelName} label.`);
               await deleteComment();
+              return;
+            }
+
+            let run;
+            for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+              const { data: runData } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                event: 'pull_request',
+                per_page: 100,
+              });
+
+              run = runData.workflow_runs.find(candidate =>
+                candidate.name === workflowName &&
+                candidate.head_sha === pr.head.sha
+              );
+
+              if (run && run.status === 'completed') {
+                break;
+              }
+
+              await new Promise(resolve => setTimeout(resolve, sleepMs));
+            }
+
+            if (!run) {
+              await upsertComment([
+                marker,
+                'No PR package build was found for the current head commit yet.',
+                '',
+                `- Expected workflow: \`${workflowName}\``,
+                `- Head commit: \`${pr.head.sha}\``,
+                '',
+                `Keep the \`${labelName}\` label on the PR and rerun the package workflow if needed.`,
+              ].join('\n'));
+              core.setFailed(`No ${workflowName} run found for PR #${prNumber}.`);
               return;
             }
 
