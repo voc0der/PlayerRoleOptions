@@ -16,6 +16,10 @@ permissions:
   issues: write
   pull-requests: write
 
+concurrency:
+  group: pr-package-comment-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   comment:
     runs-on: ubuntu-latest
@@ -43,7 +47,19 @@ jobs:
               per_page: 100,
             });
 
-            const existingComment = comments.find(comment => comment.body?.includes(marker));
+            const managedComments = comments.filter(comment => comment.body?.includes(marker));
+            const existingComment = managedComments[0];
+            const duplicateComments = managedComments.slice(1);
+
+            async function deleteDuplicateComments() {
+              for (const comment of duplicateComments) {
+                await github.rest.issues.deleteComment({
+                  owner,
+                  repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
 
             async function upsertComment(body) {
               if (existingComment) {
@@ -53,6 +69,7 @@ jobs:
                   comment_id: existingComment.id,
                   body,
                 });
+                await deleteDuplicateComments();
                 return;
               }
 
@@ -62,18 +79,17 @@ jobs:
                 issue_number: prNumber,
                 body,
               });
+              await deleteDuplicateComments();
             }
 
             async function deleteComment() {
-              if (!existingComment) {
-                return;
+              for (const comment of managedComments) {
+                await github.rest.issues.deleteComment({
+                  owner,
+                  repo,
+                  comment_id: comment.id,
+                });
               }
-
-              await github.rest.issues.deleteComment({
-                owner,
-                repo,
-                comment_id: existingComment.id,
-              });
             }
 
             const hasBuildLabel = pr.labels.some(label => label.name === labelName);
