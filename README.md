@@ -21,7 +21,7 @@ Current version: `1.0.4`
 
 1. Download the latest release from GitHub or CurseForge.
 2. Extract the `PlayerRoleOptions` folder into:
-   `World of Warcraft/_classic_/Interface/AddOns/`
+   `World of Warcraft/_anniversary_/Interface/AddOns/`
 3. Start the game and make sure the addon is enabled.
 
 ## Use

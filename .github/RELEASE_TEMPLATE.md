@@ -18,7 +18,7 @@ Use this template when creating a new release. Copy the relevant section from CH
 
 ## Installation
 
-Download `PlayerRoleOptions.zip` and extract to your `World of Warcraft/_classic_/Interface/AddOns/` directory.
+Download `PlayerRoleOptions.zip` and extract to your `World of Warcraft/_anniversary_/Interface/AddOns/` directory.
 
 ## Usage
 
