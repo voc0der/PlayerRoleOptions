@@ -1,0 +1,140 @@
+name: PR Package Comment
+
+on:
+  workflow_run:
+    workflows:
+      - PR Addon Package
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  comment:
+    if: ${{ github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update PR package comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run = context.payload.workflow_run;
+            const prNumber = run.pull_requests?.[0]?.number;
+            const marker = '<!-- playerroleoptions-pr-package -->';
+            const labelName = 'build';
+
+            if (!prNumber) {
+              core.info('No pull request is associated with this workflow run.');
+              return;
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const existingComment = comments.find(comment => comment.body?.includes(marker));
+
+            async function upsertComment(body) {
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: existingComment.id,
+                  body,
+                });
+                return;
+              }
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+            async function deleteComment() {
+              if (!existingComment) {
+                return;
+              }
+
+              await github.rest.issues.deleteComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+              });
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            const hasBuildLabel = pr.labels.some(label => label.name === labelName);
+            if (!hasBuildLabel) {
+              core.info(`PR #${prNumber} does not have the ${labelName} label.`);
+              await deleteComment();
+              return;
+            }
+
+            if (run.conclusion !== 'success') {
+              await upsertComment([
+                marker,
+                'The latest labeled PR package build did not produce a downloadable artifact.',
+                '',
+                `- Status: \`${run.conclusion}\``,
+                `- Workflow run: [View logs](${run.html_url})`,
+                '',
+                `Keep the \`${labelName}\` label on the PR and push or rerun the build to try again.`,
+              ].join('\n'));
+              return;
+            }
+
+            const { data: artifactData } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner,
+              repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+
+            const expectedArtifactName = `PlayerRoleOptions-pr-${prNumber}`;
+            const artifact = artifactData.artifacts.find(candidate => candidate.name === expectedArtifactName && !candidate.expired)
+              || artifactData.artifacts.find(candidate => !candidate.expired);
+
+            if (!artifact) {
+              await upsertComment([
+                marker,
+                'The latest labeled PR package build completed successfully, but no artifact was found.',
+                '',
+                `- Workflow run: [View logs](${run.html_url})`,
+              ].join('\n'));
+              core.setFailed(`No artifact found for workflow run ${run.id}.`);
+              return;
+            }
+
+            const expiresAt = artifact.expires_at
+              ? new Date(artifact.expires_at).toUTCString()
+              : 'Unknown';
+
+            await upsertComment([
+              marker,
+              'A public PR package is ready.',
+              '',
+              `- Download zip: [${artifact.name}.zip](${artifact.archive_download_url})`,
+              `- Workflow run: [View logs](${run.html_url})`,
+              `- Expires: \`${expiresAt}\``,
+              '',
+              `This comment is refreshed after each completed package build while the \`${labelName}\` label is present.`,
+            ].join('\n'));

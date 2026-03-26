@@ -29,7 +29,6 @@ jobs:
           set -euo pipefail
 
           package_dir="dist/PlayerRoleOptions"
-          archive_name="PlayerRoleOptions-pr-${{ github.event.pull_request.number }}.zip"
 
           rm -rf dist
           mkdir -p "$package_dir"
@@ -45,15 +44,10 @@ jobs:
             cp -R "$path" "$package_dir/"
           done
 
-          (
-            cd dist
-            zip -r "$archive_name" PlayerRoleOptions
-          )
-
       - name: Upload addon zip
         uses: actions/upload-artifact@v4
         with:
           name: PlayerRoleOptions-pr-${{ github.event.pull_request.number }}
-          path: dist/PlayerRoleOptions-pr-${{ github.event.pull_request.number }}.zip
+          path: dist/PlayerRoleOptions
           if-no-files-found: error
           retention-days: 14
