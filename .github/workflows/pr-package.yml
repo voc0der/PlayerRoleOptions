@@ -23,26 +23,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build addon zip
+      - name: Verify release package contents
+        shell: bash
+        run: ./.github/scripts/verify-release-package.sh
+
+      - name: Build addon package
         shell: bash
         run: |
           set -euo pipefail
 
           package_dir="dist/PlayerRoleOptions"
-
-          rm -rf dist
-          mkdir -p "$package_dir"
-
-          shopt -s dotglob nullglob
-          for path in *; do
-            case "$path" in
-              .git|.github|tests|dist|README.md|RELEASING.md|.pkgmeta)
-                continue
-                ;;
-            esac
-
-            cp -R "$path" "$package_dir/"
-          done
+          ./.github/scripts/stage-addon.sh "$package_dir"
 
       - name: Upload addon zip
         uses: actions/upload-artifact@v4

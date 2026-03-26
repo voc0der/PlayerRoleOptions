@@ -7,8 +7,13 @@ manual-changelog:
   markup-type: markdown
 
 ignore:
+  - CHANGELOG.md
+  - LICENSE
+  - RELEASING.md
+  - assets
   - README.md
-  - .gitignore
   - .github
+  - tests
+  - .gitignore
 
 wowi-archive-previous: no
