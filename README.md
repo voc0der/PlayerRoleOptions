@@ -18,11 +18,13 @@
 ## Features
 
 - Adds role assignment options back to the unit right-click menu for other players in your party or raid
+- Adds an AddOns settings entry with an `LFG Default Role` dropdown that supports any combination of `Tank`, `Healer`, and `DPS`
 - Supports `Tank`, `Healer`, `DPS`, and `Clear Role`
 - Shows the menu only when you have permission to assign roles:
   - Party leader in parties
   - Raid leader or raid assistant in raids
 - Uses Blizzard's existing `UnitSetRole` API instead of replacing backend behavior
+- Applies the configured LFG default role on login so the Blizzard LFG UI opens with that role preselected
 
 ## Installation
 
@@ -35,6 +37,7 @@
 
 - Right-click another player in your party or raid.
 - Use the restored `Set Role` section to choose `Tank`, `Healer`, `DPS`, or `Clear Role`.
+- Open `Game` -> `AddOns` -> `PlayerRoleOptions` to choose the role combination that should be preselected for Blizzard LFG on login.
 
 ## Limitations
 

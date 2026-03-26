@@ -33,8 +33,13 @@ local function setup_env(opts)
 
     local state = {
         added_buttons = {},
+        frames = {},
         hooks = {},
+        lfg_roles = copy_table(opts.lfg_roles or {}),
         modified_menus = {},
+        settings_categories = {},
+        settings_dropdowns = {},
+        settings_proxy_settings = {},
         units = copy_table(opts.units or {}),
         in_group = not not opts.in_group,
         in_raid = not not opts.in_raid,
@@ -44,6 +49,7 @@ local function setup_env(opts)
     }
 
     _G.PlayerRoleOptions = nil
+    _G.PlayerRoleOptionsDB = copy_table(opts.saved_vars)
     _G.TANK = "Tank"
     _G.HEALER = "Healer"
     _G.DAMAGER = "DPS"
@@ -87,6 +93,24 @@ local function setup_env(opts)
 
     _G.CloseDropDownMenus = function()
         state.menus_closed = true
+    end
+
+    _G.CreateFrame = function()
+        local frame = {
+            events = {},
+            scripts = {},
+        }
+
+        function frame:RegisterEvent(event)
+            self.events[event] = true
+        end
+
+        function frame:SetScript(scriptType, handler)
+            self.scripts[scriptType] = handler
+        end
+
+        state.frames[#state.frames + 1] = frame
+        return frame
     end
 
     _G.IsInGroup = function()
@@ -158,8 +182,96 @@ local function setup_env(opts)
         }
     end
 
+    _G.GetLFGRoles = function()
+        return not not state.lfg_roles.leader,
+            not not state.lfg_roles.tank,
+            not not state.lfg_roles.healer,
+            not not state.lfg_roles.dps
+    end
+
+    _G.SetLFGRoles = function(leader, tank, healer, dps)
+        state.last_lfg_roles_set = {
+            leader = not not leader,
+            tank = not not tank,
+            healer = not not healer,
+            dps = not not dps,
+        }
+        state.lfg_roles = copy_table(state.last_lfg_roles_set)
+    end
+
+    _G.Settings = nil
+    if opts.settings_api then
+        _G.Settings = {
+            VarType = {
+                Number = "Number",
+            },
+        }
+
+        function _G.Settings.RegisterVerticalLayoutCategory(name)
+            local category = {
+                name = name,
+            }
+            state.settings_categories[#state.settings_categories + 1] = category
+            return category
+        end
+
+        function _G.Settings.RegisterProxySetting(category, variable, variableType, name, defaultValue, getValue, setValue)
+            local setting = {
+                category = category,
+                defaultValue = defaultValue,
+                getValue = getValue,
+                name = name,
+                setValue = setValue,
+                variable = variable,
+                variableType = variableType,
+            }
+
+            function setting:GetValue()
+                return self.getValue()
+            end
+
+            function setting:SetValue(value)
+                self.setValue(value)
+            end
+
+            state.settings_proxy_settings[#state.settings_proxy_settings + 1] = setting
+            return setting
+        end
+
+        function _G.Settings.CreateControlTextContainer()
+            local entries = {}
+            return {
+                Add = function(_, value, text)
+                    entries[#entries + 1] = {
+                        value = value,
+                        text = text,
+                    }
+                end,
+                GetData = function()
+                    return copy_table(entries)
+                end,
+            }
+        end
+
+        function _G.Settings.CreateDropdown(category, setting, getOptions, tooltip)
+            local dropdown = {
+                category = category,
+                options = getOptions(),
+                setting = setting,
+                tooltip = tooltip,
+            }
+            state.settings_dropdowns[#state.settings_dropdowns + 1] = dropdown
+            return dropdown
+        end
+
+        function _G.Settings.RegisterAddOnCategory(category)
+            state.registered_addon_category = category
+        end
+    end
+
     local chunk = assert(loadfile("PlayerRoleOptions.lua"))
     state.exports = chunk("PlayerRoleOptions")
+    state.event_frame = state.frames[1]
     state.menu_hook = state.hooks.UnitPopup_ShowMenu
     return state
 end
@@ -226,6 +338,14 @@ local function find_child_by_text(children, text)
     for _, child in ipairs(children) do
         if child.text == text then
             return child
+        end
+    end
+end
+
+local function find_dropdown_option_value(dropdown, text)
+    for _, option in ipairs(dropdown.options) do
+        if option.text == text then
+            return option.value
         end
     end
 end
@@ -468,6 +588,7 @@ local function test_ignores_registration_failures_during_load()
     }
 
     _G.PlayerRoleOptions = nil
+    _G.PlayerRoleOptionsDB = nil
     _G.TANK = "Tank"
     _G.HEALER = "Healer"
     _G.DAMAGER = "DPS"
@@ -527,12 +648,102 @@ local function test_ignores_registration_failures_during_load()
         return nil
     end
     _G.UnitSetRole = function() end
+    _G.GetLFGRoles = function()
+        return false, false, false, false
+    end
+    _G.SetLFGRoles = function() end
+    _G.Settings = nil
+    _G.CreateFrame = function()
+        return {
+            RegisterEvent = function() end,
+            SetScript = function() end,
+        }
+    end
 
     local chunk = assert(loadfile("PlayerRoleOptions.lua"))
     local loadOk = pcall(chunk, "PlayerRoleOptions")
 
     assert_true(loadOk, "addon should ignore load-time registration failures")
     assert_true(type(state.modified_menus.MENU_UNIT_RAID) == "function", "should continue registering other modern tags")
+end
+
+local function test_registers_settings_category_with_dropdown()
+    local state = setup_env({
+        settings_api = true,
+        lfg_roles = {
+            healer = true,
+        },
+    })
+
+    assert_equal(#state.settings_categories, 1, "expected one addon settings category")
+    assert_equal(state.settings_categories[1].name, "PlayerRoleOptions", "expected settings category name")
+    assert_true(state.registered_addon_category == state.settings_categories[1], "expected addon category registration")
+    assert_equal(#state.settings_dropdowns, 1, "expected one dropdown control")
+    assert_equal(state.settings_dropdowns[1].setting.name, "LFG Default Role", "expected dropdown label")
+    assert_equal(state.settings_dropdowns[1].options[1].text, "None", "expected none option")
+    assert_equal(state.settings_dropdowns[1].options[2].text, "DPS", "expected dps option")
+    assert_equal(state.settings_dropdowns[1].options[3].text, "Tank", "expected tank option")
+    assert_equal(state.settings_dropdowns[1].options[4].text, "Healer", "expected healer option")
+    assert_equal(state.settings_dropdowns[1].options[5].text, "Tank + Healer", "expected tank healer option")
+    assert_equal(state.settings_dropdowns[1].options[6].text, "Tank + DPS", "expected tank dps option")
+    assert_equal(state.settings_dropdowns[1].options[7].text, "Healer + DPS", "expected healer dps option")
+    assert_equal(state.settings_dropdowns[1].options[8].text, "Tank + Healer + DPS", "expected all roles option")
+end
+
+local function test_settings_dropdown_reads_current_lfg_role_when_unset()
+    local state = setup_env({
+        settings_api = true,
+        lfg_roles = {
+            tank = true,
+            healer = true,
+        },
+    })
+
+    assert_equal(state.exports._test.GetSavedLFGDefaultRole(), nil, "expected no saved default role")
+    assert_equal(state.settings_proxy_settings[1]:GetValue(), state.exports._test.GetCurrentLFGDefaultRole(), "dropdown should reflect current LFG role when unset")
+    assert_equal(state.settings_proxy_settings[1]:GetValue(), find_dropdown_option_value(state.settings_dropdowns[1], "Tank + Healer"), "expected current multi-role selection to map to combo option")
+end
+
+local function test_settings_dropdown_change_saves_and_applies_role()
+    local state = setup_env({
+        settings_api = true,
+        lfg_roles = {
+            leader = true,
+            healer = true,
+        },
+    })
+
+    local dropdown = state.settings_dropdowns[1]
+    local tankDpsValue = find_dropdown_option_value(dropdown, "Tank + DPS")
+    state.settings_proxy_settings[1]:SetValue(tankDpsValue)
+
+    assert_equal(state.exports._test.GetSavedLFGDefaultRole(), tankDpsValue, "expected selected role to be saved")
+    assert_true(state.last_lfg_roles_set ~= nil, "expected dropdown change to apply role")
+    assert_true(state.last_lfg_roles_set.leader, "expected leader flag to be preserved")
+    assert_true(state.last_lfg_roles_set.tank, "expected tank role to be enabled")
+    assert_false(state.last_lfg_roles_set.healer, "expected healer role to be cleared")
+    assert_true(state.last_lfg_roles_set.dps, "expected dps role to be enabled")
+end
+
+local function test_player_login_applies_saved_lfg_default_role()
+    local state = setup_env({
+        settings_api = true,
+        lfg_roles = {
+            leader = true,
+        },
+    })
+
+    local healerDpsValue = find_dropdown_option_value(state.settings_dropdowns[1], "Healer + DPS")
+    state.exports._test.SetSavedLFGDefaultRole(healerDpsValue)
+    state.last_lfg_roles_set = nil
+
+    state.exports._test.OnEvent(nil, "PLAYER_LOGIN")
+
+    assert_true(state.last_lfg_roles_set ~= nil, "expected saved role to apply on login")
+    assert_true(state.last_lfg_roles_set.leader, "expected leader flag to remain enabled")
+    assert_false(state.last_lfg_roles_set.tank, "expected tank role cleared on login")
+    assert_true(state.last_lfg_roles_set.healer, "expected healer role applied on login")
+    assert_true(state.last_lfg_roles_set.dps, "expected dps role applied on login")
 end
 
 local tests = {
@@ -546,6 +757,10 @@ local tests = {
     { name = "can show for self only when in group and leader", fn = test_can_show_for_self_only_when_in_group_and_leader },
     { name = "loads without popup api", fn = test_loads_without_popup_api },
     { name = "ignores registration failures during load", fn = test_ignores_registration_failures_during_load },
+    { name = "registers settings category with dropdown", fn = test_registers_settings_category_with_dropdown },
+    { name = "settings dropdown reads current lfg role when unset", fn = test_settings_dropdown_reads_current_lfg_role_when_unset },
+    { name = "settings dropdown change saves and applies role", fn = test_settings_dropdown_change_saves_and_applies_role },
+    { name = "player login applies saved lfg default role", fn = test_player_login_applies_saved_lfg_default_role },
 }
 
 for _, testCase in ipairs(tests) do
