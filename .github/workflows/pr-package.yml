@@ -1,0 +1,59 @@
+name: PR Addon Package
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-package-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build addon zip
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_dir="dist/PlayerRoleOptions"
+          archive_name="PlayerRoleOptions-pr-${{ github.event.pull_request.number }}.zip"
+
+          rm -rf dist
+          mkdir -p "$package_dir"
+
+          shopt -s dotglob nullglob
+          for path in *; do
+            case "$path" in
+              .git|.github|tests|dist|README.md|RELEASING.md|.pkgmeta)
+                continue
+                ;;
+            esac
+
+            cp -R "$path" "$package_dir/"
+          done
+
+          (
+            cd dist
+            zip -r "$archive_name" PlayerRoleOptions
+          )
+
+      - name: Upload addon zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlayerRoleOptions-pr-${{ github.event.pull_request.number }}
+          path: dist/PlayerRoleOptions-pr-${{ github.event.pull_request.number }}.zip
+          if-no-files-found: error
+          retention-days: 14
