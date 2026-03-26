@@ -1,52 +1,44 @@
-<p align="center">
-  <img src="assets/playerroleoptions-icon.png" alt="PlayerRoleOptions icon" width="180" />
-</p>
+# PlayerRoleOptions
 
-<h1 align="center">PlayerRoleOptions</h1>
+`PlayerRoleOptions` is a small addon for TBC Anniversary Classic.
 
-<p align="center">
-  Restore the missing right-click role assignment menu for party leaders, raid leaders, and raid assistants in TBC Anniversary Classic.
-</p>
+It does two things:
 
-<p align="center"><strong>Current version:</strong> <code>1.0.4</code></p>
+- puts the missing `Set Role` options back into the unit right-click menu when you have permission to assign roles
+- lets you save a default Blizzard LFG role selection and reapply it on login
 
-## Scope
+Current version: `1.0.4`
+
+## What It Does
+
+- Restores `Tank`, `Healer`, `DPS`, and `Clear Role` in the unit menu
+- Works for party leaders, raid leaders, and raid assistants
+- Adds `Game` -> `AddOns` -> `PlayerRoleOptions` with an `LFG Default Role` dropdown
+- Supports any Blizzard LFG role combination, including single-role, dual-role, and all-role selections
+- Uses Blizzard's existing APIs instead of replacing role-assignment behavior
+
+## Install
+
+1. Download the latest release from GitHub or CurseForge.
+2. Extract the `PlayerRoleOptions` folder into:
+   `World of Warcraft/_classic_/Interface/AddOns/`
+3. Start the game and make sure the addon is enabled.
+
+## Use
+
+- Right-click a player in your party or raid to assign `Tank`, `Healer`, `DPS`, or `Clear Role`.
+- Open `Game` -> `AddOns` -> `PlayerRoleOptions` to choose which LFG roles Blizzard should have prechecked after login.
+
+## Notes
 
 - Target client: TBC Anniversary Classic
 - TOC interface: `20505`
-
-## Features
-
-- Adds role assignment options back to the unit right-click menu for other players in your party or raid
-- Adds an AddOns settings entry with an `LFG Default Role` dropdown that supports any combination of `Tank`, `Healer`, and `DPS`
-- Supports `Tank`, `Healer`, `DPS`, and `Clear Role`
-- Shows the menu only when you have permission to assign roles:
-  - Party leader in parties
-  - Raid leader or raid assistant in raids
-- Uses Blizzard's existing `UnitSetRole` API instead of replacing backend behavior
-- Applies the configured LFG default role on login so the Blizzard LFG UI opens with that role preselected
-
-## Installation
-
-1. Download or clone this repository.
-2. Place the `PlayerRoleOptions` folder in:
-   - `World of Warcraft/_classic_/Interface/AddOns/`
-3. Launch the game and enable `PlayerRoleOptions` in the AddOns list.
-
-## Usage
-
-- Right-click another player in your party or raid.
-- Use the restored `Set Role` section to choose `Tank`, `Healer`, `DPS`, or `Clear Role`.
-- Open `Game` -> `AddOns` -> `PlayerRoleOptions` to choose the role combination that should be preselected for Blizzard LFG on login.
-
-## Limitations
-
-- This addon restores the missing client-side menu entry.
-- It depends on Blizzard still allowing role assignments through `UnitSetRole`. If Blizzard removes the API behavior itself, no addon can force the assignment to succeed.
+- This addon restores missing client UI and uses Blizzard's `UnitSetRole` and LFG role APIs.
+- If Blizzard changes or removes that backend behavior, the addon cannot override it.
 
 ## Development
 
-Run local tests:
+Run tests:
 
 ```bash
 lua tests/run.lua
@@ -55,13 +47,7 @@ lua tests/run.lua
 Syntax check:
 
 ```bash
-luac -p PlayerRoleOptions.lua
+luac -p PlayerRoleOptions.lua tests/run.lua
 ```
 
-## Releasing
-
-Release workflow details are in [`RELEASING.md`](RELEASING.md).
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=voc0der/playerroleoptions&type=Date)](https://star-history.com/#voc0der/playerroleoptions&Date)
+Release workflow notes are in [`RELEASING.md`](RELEASING.md).
