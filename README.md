@@ -8,7 +8,7 @@
   Restore the missing right-click role assignment menu for party leaders, raid leaders, and raid assistants in TBC Anniversary Classic.
 </p>
 
-<p align="center"><strong>Current version:</strong> <code>1.0.3</code></p>
+<p align="center"><strong>Current version:</strong> <code>1.0.4</code></p>
 
 ## Scope
 

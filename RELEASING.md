@@ -33,8 +33,8 @@ Before automated release can work end-to-end, configure:
 ### Troubleshooting
 
 - No new tag created:
-  - Check `## Version:` in `PlayerRoleOptions.toc` is bumped (for example `1.0.3`)
-  - If tag already exists (for example `v1.0.3`), workflow will skip by design
+  - Check `## Version:` in `PlayerRoleOptions.toc` is bumped (for example `1.0.4`)
+  - If tag already exists (for example `v1.0.4`), workflow will skip by design
 - Tag created but no release upload:
   - Confirm `CF_API_KEY` exists in repo secrets
   - Confirm `## X-Curse-Project-ID:` is set to a valid numeric project ID
