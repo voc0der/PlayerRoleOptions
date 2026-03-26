@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/playerroleoptions-icon.png" alt="PlayerRoleOptions icon" width="180" />
+</p>
+
 # PlayerRoleOptions
 
 `PlayerRoleOptions` is a small addon for TBC Anniversary Classic.
