@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.0.5] - 2026-03-30
+
+### Fixed
+- Register Blizzard's modern `MENU_UNIT_SELF` popup so right clicking your own player frame shows the `Set Role` submenu again
+
 ## [1.0.4] - 2026-03-26
 
 ### Changed

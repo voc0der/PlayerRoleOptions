@@ -521,8 +521,10 @@ local function test_modern_menu_allows_self_assignment()
         },
     })
 
+    assert_true(type(state.modified_menus.MENU_UNIT_SELF) == "function", "expected self unit menu registration")
+
     local root = create_root_description()
-    state.modified_menus.MENU_UNIT_PLAYER(
+    state.modified_menus.MENU_UNIT_SELF(
         { unit = "player" },
         root,
         { unit = "player", fullName = "Leader" }
