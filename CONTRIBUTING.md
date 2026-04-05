@@ -12,6 +12,20 @@ This repo is intentionally small. Changes should stay focused on the addon itsel
 
 ## Development
 
+Keep a local Blizzard UI mirror at `../wow-ui-source`. If you do not already have it checked out:
+
+```bash
+git clone https://github.com/Gethe/wow-ui-source ../wow-ui-source
+```
+
+Refresh the Blizzard UI reference before you start work:
+
+```bash
+git -C ../wow-ui-source pull --ff-only
+```
+
+Use `../wow-ui-source` first for TOC, interface number, FrameXML, and Blizzard UI/API questions before changing addon code or guessing at client behavior.
+
 Run the local test suite:
 
 ```bash
