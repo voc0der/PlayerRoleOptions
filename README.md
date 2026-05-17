@@ -7,7 +7,7 @@
 - Re-introduces `Set Role` options back into the unit right-click menu when you have permission to assign roles
 - Save a default Blizzard LFG role selection and reapply it on login
 
-Current version: `1.0.5`
+Current version: `1.0.6`
 
 ## What It Does
 
