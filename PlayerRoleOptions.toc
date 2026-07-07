@@ -1,8 +1,8 @@
-## Interface: 20505
+## Interface: 20506
 ## Title: PlayerRoleOptions
 ## Notes: Restores right-click role assignment for party leaders, raid leaders, and raid assistants in TBC Anniversary Classic.
 ## Author: voc0der
-## Version: 1.0.6
+## Version: 1.0.7
 ## X-Curse-Project-ID: 1492101
 ## SavedVariables: PlayerRoleOptionsDB
 

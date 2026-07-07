@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [1.0.7] - 2026-07-07
+
+### Changed
+- Bumped TOC interface to `20506` for the TBC Anniversary `2.5.6` (68502) client patch.
+
+### Tests
+- Verified against the `wow-ui-source` diff between `2.5.5` (68101) and `2.5.6` (68502): the modern `Menu.ModifyMenu`/`CreateButton`/`CreateRadio`/`CreateDivider`/`CreateTitle` API and the legacy `UnitPopupMenus` table this addon hooks are unchanged (only internal tooltip API renames and a new `CreateColorSwatch` helper were added). No code changes required.
+
 ## [1.0.6] - 2026-05-17
 
 ### Changed
